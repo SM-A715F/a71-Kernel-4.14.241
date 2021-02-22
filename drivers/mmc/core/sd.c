@@ -152,6 +152,7 @@ static int mmc_decode_csd(struct mmc_card *card)
 		}
 
 		/* permanent write protection */
+
 		if (UNSTUFF_BITS(resp, 13, 1))
 			mmc_card_set_readonly(card);
 		break;
@@ -190,6 +191,7 @@ static int mmc_decode_csd(struct mmc_card *card)
 		csd->erase_size = 1;
 
 		/* permanent write protection */
+
 		if (UNSTUFF_BITS(resp, 13, 1))
 			mmc_card_set_readonly(card);
 		break;
