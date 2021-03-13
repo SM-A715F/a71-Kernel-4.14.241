@@ -1369,8 +1369,6 @@ __writeback_single_inode(struct inode *inode, struct writeback_control *wbc)
 	long nr_to_write = wbc->nr_to_write;
 	unsigned dirty;
 	int ret;
-	/* @fs.sec -- 62cf6bdd87a5c084b05e3bb9a11045a339d42a6b -- */
-	bool newly_dirty = false;
 
 	WARN_ON(!(inode->i_state & I_SYNC));
 
@@ -1410,7 +1408,6 @@ __writeback_single_inode(struct inode *inode, struct writeback_control *wbc)
 	 * write_inode()
 	 */
 	spin_lock(&inode->i_lock);
-
 	dirty = inode->i_state & I_DIRTY;
 	inode->i_state &= ~dirty;
 
@@ -1428,12 +1425,10 @@ __writeback_single_inode(struct inode *inode, struct writeback_control *wbc)
 	smp_mb();
 
 	if (mapping_tagged(mapping, PAGECACHE_TAG_DIRTY))
-		newly_dirty = true;
+		inode->i_state |= I_DIRTY_PAGES;
 
 	spin_unlock(&inode->i_lock);
 
-	if (newly_dirty)
-		__mark_inode_dirty(inode, I_DIRTY_PAGES);
 	/* Don't write the inode if only I_DIRTY_PAGES was set */
 	if (dirty & ~I_DIRTY_PAGES) {
 		int err = write_inode(inode, wbc);
@@ -2203,7 +2198,7 @@ void __mark_inode_dirty(struct inode *inode, int flags)
 			if (inode_unhashed(inode))
 				goto out_unlock_inode;
 		}
-		if (inode->i_state & (I_WILL_FREE | I_FREEING))
+		if (inode->i_state & I_FREEING)
 			goto out_unlock_inode;
 
 		/*
@@ -2232,12 +2227,6 @@ void __mark_inode_dirty(struct inode *inode, int flags)
 
 			wakeup_bdi = inode_io_list_move_locked(inode, wb,
 							       dirty_list);
-
-			if (inode->i_state & (I_WILL_FREE | I_FREEING)) {
-				inode_io_list_del_locked(inode, wb);
-				spin_unlock(&wb->list_lock);
-				return;
-			}
 
 			spin_unlock(&wb->list_lock);
 			trace_writeback_dirty_inode_enqueue(inode);
