@@ -30,8 +30,11 @@
 #include <linux/relay.h>
 #include <linux/slab.h>
 #include <linux/percpu-rwsem.h>
+<<<<<<< HEAD
 #include <uapi/linux/sched/types.h>
 #include <linux/highmem.h>
+=======
+>>>>>>> 9f6e4f48e9e0... cpu/hotplug: Cure the cpusets trainwreck
 #include <linux/cpuset.h>
 
 #include <trace/events/power.h>
