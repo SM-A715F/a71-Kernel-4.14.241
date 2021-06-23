@@ -74,7 +74,6 @@
 #include <linux/slab.h>
 #include <linux/perf_event.h>
 #include <linux/ptrace.h>
-#include <linux/pti.h>
 #include <linux/blkdev.h>
 #include <linux/elevator.h>
 #include <linux/sched_clock.h>
@@ -119,6 +118,7 @@ void __init __weak defex_load_rules(void) { }
 static int kernel_init(void *);
 
 extern void init_IRQ(void);
+extern void fork_init(void);
 extern void radix_tree_init(void);
 
 #ifdef CONFIG_DEFERRED_INITCALLS
@@ -644,10 +644,6 @@ static void __init mm_init(void)
 	pgtable_init();
 	vmalloc_init();
 	ioremap_huge_init();
-	/* Should be run before the first non-init thread is created */
-	init_espfix_bsp();
-	/* Should be run after espfix64 is set up. */
-	pti_init();
 }
 
 #ifdef CONFIG_UH_RKP
@@ -794,6 +790,8 @@ asmlinkage __visible void __init start_kernel(void)
 		parse_args("Setting init args", after_dashes, NULL, 0, -1, -1,
 			   NULL, set_init_arg);
 
+	jump_label_init();
+
 	/*
 	 * These use large bootmem allocations and must precede
 	 * kmem_cache_init()
@@ -903,6 +901,7 @@ asmlinkage __visible void __init start_kernel(void)
 		initrd_start = 0;
 	}
 #endif
+	page_ext_init();
 	kmemleak_init();
 	debug_objects_mem_init();
 	setup_per_cpu_pageset();
@@ -916,6 +915,10 @@ asmlinkage __visible void __init start_kernel(void)
 #ifdef CONFIG_X86
 	if (efi_enabled(EFI_RUNTIME_SERVICES))
 		efi_enter_virtual_mode();
+#endif
+#ifdef CONFIG_X86_ESPFIX64
+	/* Should be run before the first non-init thread is created */
+	init_espfix_bsp();
 #endif
 	thread_stack_cache_init();
 #ifdef CONFIG_RKP_KDP
@@ -951,8 +954,6 @@ asmlinkage __visible void __init start_kernel(void)
 
 	/* Do the rest non-__init'ed, we're now alive */
 	rest_init();
-
-	prevent_tail_call_optimization();
 }
 
 /* Call all constructor functions linked into the kernel. */
@@ -1039,37 +1040,6 @@ static bool __init_or_module initcall_blacklisted(initcall_t fn)
 __setup("initcall_blacklist=", initcall_blacklist);
 
 #ifdef CONFIG_SEC_BOOTSTAT
-static bool __init_or_module initcall_sec_debug = true;
-
-static int __init_or_module do_one_initcall_sec_debug(initcall_t fn)
-{
-	ktime_t calltime, delta, rettime;
-	unsigned long long duration;
-	int ret;
-	struct device_init_time_entry *entry;
-
-	calltime = ktime_get();
-	ret = fn();
-	rettime = ktime_get();
-	delta = ktime_sub(rettime, calltime);
-	duration = (unsigned long long) ktime_to_ns(delta) >> 10;
-	if (duration > DEVICE_INIT_TIME_100MS) {
-		entry = kmalloc(sizeof(*entry), GFP_KERNEL);
-		if (!entry)
-			return -ENOMEM;
-		entry->buf = kasprintf(GFP_KERNEL, "%pf", fn);
-		if (!entry->buf) {
-			return -ENOMEM;
-		}
-		entry->duration = duration;
-		list_add(&entry->next, &device_init_time_list);
-		printk(KERN_DEBUG "initcall %pF returned %d after %lld usecs\n",
-			 fn, ret, duration);
-	}
-
-	return ret;
-}
-#endif
 
 static int __init_or_module do_one_initcall_debug(initcall_t fn)
 {
@@ -1089,6 +1059,8 @@ static int __init_or_module do_one_initcall_debug(initcall_t fn)
 	return ret;
 }
 
+#endif
+
 int __init_or_module do_one_initcall(initcall_t fn)
 {
 	int count = preempt_count();
@@ -1101,8 +1073,8 @@ int __init_or_module do_one_initcall(initcall_t fn)
 	if (initcall_debug)
 		ret = do_one_initcall_debug(fn);
 #ifdef CONFIG_SEC_BSP
-	else if (initcall_sec_debug)
-		ret = do_one_initcall_sec_debug(fn);
+	else if (initcall_debug)
+		ret = do_one_initcall_debug(fn);
 #endif
 	else
 		ret = fn();
@@ -1260,13 +1232,6 @@ __setup("rodata=", set_debug_rodata);
 static void mark_readonly(void)
 {
 	if (rodata_enabled) {
-		/*
-		 * load_module() results in W+X mappings, which are cleaned up
-		 * with call_rcu_sched().  Let's make sure that queued work is
-		 * flushed so that we don't hit false positives looking for
-		 * insecure pages which are W+X.
-		 */
-		rcu_barrier_sched();
 		mark_rodata_ro();
 		rodata_test();
 	} else
@@ -1378,7 +1343,7 @@ static noinline void __init kernel_init_freeable(void)
 	 */
 	set_mems_allowed(node_states[N_MEMORY]);
 
-	cad_pid = get_pid(task_pid(current));
+	cad_pid = task_pid(current);
 
 	smp_prepare_cpus(setup_max_cpus);
 
@@ -1393,8 +1358,6 @@ static noinline void __init kernel_init_freeable(void)
 	sched_init_smp();
 
 	page_alloc_init_late();
-	/* Initialize page ext after all struct pages are initialized. */
-	page_ext_init();
 
 	do_basic_setup();
 

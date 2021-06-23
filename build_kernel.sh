@@ -1,15 +1,55 @@
 #!/bin/bash
 
-export CROSS_COMPILE=~/REALBITCH/gcc/bin/aarch64-linux-android-
-export ARCH=arm64
-mkdir out
+# Check if have toolchain/llvm folder
 
-BUILD_CROSS_COMPILE=~/REALBITCH/gcc/bin/aarch64-linux-android-
-KERNEL_LLVM_BIN=~/REALBITCH/llvm-sdclang/bin/clang
-CLANG_TRIPLE=aarch64-linux-gnu-
-KERNEL_MAKE_ENV="DTC_EXT=$(pwd)/tools/dtc CONFIG_BUILD_ARM64_DT_OVERLAY=y"
+# Export KBUILD flags
+export KBUILD_BUILD_USER="geekmaster21"
+export KBUILD_BUILD_HOST="geekmaster21"
 
-make -j64 -C $(pwd) O=$(pwd)/out $KERNEL_MAKE_ENV ARCH=arm64 CROSS_COMPILE=$BUILD_CROSS_COMPILE CC="ccache $KERNEL_LLVM_BIN" CLANG_TRIPLE=$CLANG_TRIPLE sm7150_sec_a71_eur_open_defconfig
-make -j64 -C $(pwd) O=$(pwd)/out $KERNEL_MAKE_ENV ARCH=arm64 CROSS_COMPILE=$BUILD_CROSS_COMPILE CC="ccache $KERNEL_LLVM_BIN" CLANG_TRIPLE=$CLANG_TRIPLE
- 
-cp out/arch/arm64/boot/Image $(pwd)/arch/arm64/boot/Image
+# Export ARCH/SUBARCH flags
+export ARCH="arm64"
+export SUBARCH="arm64"
+
+# Export ANDROID VERSION
+export PLATFORM_VERSION=11
+export ANDROID_MAJOR_VERSION=r
+
+# Export toolchain/clang/llvm flags
+export BUILD_KERNEL_DIR="~/a71r-main/"
+export KERNEL_MAKE_ENV="DTC_EXT=$BUILD_KERNEL_DIR/tools/dtc CONFIG_BUILD_ARM64_DT_OVERLAY=y"
+
+# Export if/else outdir var
+export WITH_OUTDIR=true
+
+# Clear the console
+clear
+
+# Remove out dir folder and clean the source
+if [ "${WITH_OUTDIR}" == true ]; then
+   if [ ! -d "$(pwd)/a71" ]; then
+      mkdir a71
+   fi
+fi
+
+# Build time
+if [ "${WITH_OUTDIR}" == true ]; then
+   if [ ! -d "$(pwd)/a71" ]; then
+      mkdir a71
+   fi
+fi
+
+if [ "${WITH_OUTDIR}" == true ]; then
+
+BUILD_CROSS_COMPILE=~/a71r-main/gcc/bin/aarch64-linux-android-
+
+make $KERNEL_MAKE_ENV O=a71 ARCH=arm64 sm7150_sec_a71_eur_open_defconfig
+
+PATH="/home/parallels/a71r-main/llvm-sdclang/bin:/home/parallels/a71r-main/gcc/bin:/home/parallels/a71r-main/gcc32/bin:${PATH}" \
+make -j$(nproc --all) O=a71 \
+                      ARCH=arm64 \
+                      $KERNEL_MAKE_ENV \
+                      CC=clang \
+                      CLANG_TRIPLE=aarch64-linux-gnu- \
+                      CROSS_COMPILE=aarch64-linux-android- \
+                      CROSS_COMPILE_ARM32=arm-linux-androideabi-
+fi
