@@ -14,6 +14,14 @@ export SUBARCH="arm64"
 export PLATFORM_VERSION=11
 export ANDROID_MAJOR_VERSION=r
 
+
+# Export CCACHE
+export CCACHE_EXEC="$(which ccache)"
+export CCACHE="${CCACHE_EXEC}"
+export CCACHE_COMPRESS="1"
+export USE_CCACHE="1"
+ccache -M 50G
+
 # Export toolchain/clang/llvm flags
 export BUILD_KERNEL_DIR="~/a71r-main/"
 export KERNEL_MAKE_ENV="DTC_EXT=$BUILD_KERNEL_DIR/tools/dtc CONFIG_BUILD_ARM64_DT_OVERLAY=y"
@@ -40,12 +48,16 @@ fi
 
 if [ "${WITH_OUTDIR}" == true ]; then
 
-BUILD_CROSS_COMPILE=~/a71r-main/gcc/bin/aarch64-linux-android-
+AR=llvm-ar 
+NM=llvm-nm 
+OBJCOPY=llvm-objcopy 
+OBJDUMP=llvm-objdump 
+STRIP=llvm-strip 
 
-make $KERNEL_MAKE_ENV O=a71 ARCH=arm64 sm7150_sec_a71_eur_open_defconfig
+ "${CCACHE}" make $KERNEL_MAKE_ENV O=a71 ARCH=arm64 sm7150_sec_a71_eur_open_defconfig
 
-PATH="/home/parallels/a71r-main/llvm-sdclang/bin:/home/parallels/a71r-main/gcc/bin:/home/parallels/a71r-main/gcc32/bin:${PATH}" \
-make -j$(nproc --all) O=a71 \
+PATH="/home/parallels/a71r-main/llvm-sdclang1/bin:/home/parallels/a71r-main/gcc/bin:/home/parallels/a71r-main/gcc32/bin:${PATH}" \
+ "${CCACHE}" make -j$(nproc --all) O=a71 \
                       ARCH=arm64 \
                       $KERNEL_MAKE_ENV \
                       CC=clang \
