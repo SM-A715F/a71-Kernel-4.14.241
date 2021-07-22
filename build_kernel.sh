@@ -48,20 +48,21 @@ fi
 
 if [ "${WITH_OUTDIR}" == true ]; then
 
-AR=llvm-ar 
-NM=llvm-nm 
-OBJCOPY=llvm-objcopy 
-OBJDUMP=llvm-objdump 
-STRIP=llvm-strip 
+${CCACHE} make O=a71 ARCH=arm64 sm7150_sec_a71_eur_open_defconfig
 
- "${CCACHE}" make $KERNEL_MAKE_ENV O=a71 ARCH=arm64 sm7150_sec_a71_eur_open_defconfig
-
-PATH="/home/parallels/a71r-main/llvm-sdclang1/bin:/home/parallels/a71r-main/gcc/bin:/home/parallels/a71r-main/gcc32/bin:${PATH}" \
- "${CCACHE}" make -j$(nproc --all) O=a71 \
-                      ARCH=arm64 \
-                      $KERNEL_MAKE_ENV \
-                      CC=clang \
-                      CLANG_TRIPLE=aarch64-linux-gnu- \
-                      CROSS_COMPILE=aarch64-linux-android- \
-                      CROSS_COMPILE_ARM32=arm-linux-androideabi-
-fi
+PATH=/home/parallels/tc-build/install/bin:${PATH} \
+${CCACHE} make -j$(nproc --all) O=a71 ARCH=arm64 LLVM=1 \
+                                         CC=clang \
+                                         AR=llvm-ar \
+                                         NM=llvm-nm \
+                                         LD=ld.lld \
+                                         STRIP=llvm-strip \
+                                         OBJDUMP=llvm-objdump \
+                                         OBJCOPY=llvm-objcopy \
+                                         $KERNEL_MAKE_ENV  \
+                                         CROSS_COMPILE=aarch64-linux-gnu- 
+                                         
+                                         
+                                        
+                      
+fi	

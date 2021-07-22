@@ -32,9 +32,6 @@
 #if defined(CONFIG_USB_TYPEC_MANAGER_NOTIFIER)
 #include <linux/usb/typec/usb_typec_manager_notifier.h>
 #else
-#if defined(CONFIG_CCIC_NOTIFIER)
-#include <linux/ccic/ccic_notifier.h>
-#endif /* CONFIG_CCIC_NOTIFIER */
 #if defined(CONFIG_MUIC_NOTIFIER)
 #if defined(CONFIG_USE_MUIC_LEGO)
 #include <linux/muic/common/muic.h>
