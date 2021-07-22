@@ -1,0 +1,10 @@
+--- kernel/cpu.c
++++ kernel/cpu.c
+@@ -30,7 +30,6 @@
+ #include <linux/relay.h>
+ #include <linux/slab.h>
+ #include <linux/percpu-rwsem.h>
+-#include <linux/cpuset.h>
+ 
+ #include <trace/events/power.h>
+ #define CREATE_TRACE_POINTS
