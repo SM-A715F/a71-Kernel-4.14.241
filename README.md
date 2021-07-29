@@ -1,1 +1,1 @@
-# a71-Kernel-4.14.237
+Kernel offre Samsung galaxy a71 update every week-end.
