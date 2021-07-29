@@ -1,0 +1,22 @@
+--- drivers/dma-buf/sync_file.c
++++ drivers/dma-buf/sync_file.c
+@@ -286,15 +286,16 @@ static struct sync_file *sync_file_merge(const char *name, struct sync_file *a,
+ 		fences = nfences;
+ 	}
+ 
+-	if (sync_file_set_fence(sync_file, fences, i) < 0) {
+-		kfree(fences);
++	if (sync_file_set_fence(sync_file, fences, i) < 0)
+ 		goto err;
+-	}
+ 
+ 	strlcpy(sync_file->user_name, name, sizeof(sync_file->user_name));
+ 	return sync_file;
+ 
+ err:
++	while (i)
++		dma_fence_put(fences[--i]);
++	kfree(fences);
+ 	fput(sync_file->file);
+ 	return NULL;
+ 
