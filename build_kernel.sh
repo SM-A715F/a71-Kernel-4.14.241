@@ -50,7 +50,7 @@ if [ "${WITH_OUTDIR}" == true ]; then
 
 ${CCACHE} make O=a71 ARCH=arm64 sm7150_sec_a71_eur_open_defconfig
 
-PATH=/home/parallels/tc-build/install/bin:${PATH} \
+PATH=/home/parallels/tc-build/bin:${PATH} \
 ${CCACHE} make -j$(nproc --all) O=a71 ARCH=arm64 LLVM=1 \
                                          CC=clang \
                                          AR=llvm-ar \
